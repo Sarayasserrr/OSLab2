@@ -1,44 +1,54 @@
-
 #!/bin/bash
 
 folder_to_restore="$1"
 quarantine_folder="$2"
 
-mkdir -p "$folder_to_restore" "$quarantine_folder"
-
 while true
 do
-    files=("$quarantine_folder"/*)
-
-    if [ ! -f "${files[0]}" ]; then
+    if [ ! -d "$quarantine_folder" ] || [ -z "$(ls -A "$quarantine_folder")" ]; then
         echo "No malicious files to review."
         break
     fi
 
     echo "Files in quarantine:"
-    for i in "${!files[@]}"
+
+    i=1
+    for file in "$quarantine_folder"/*
     do
-        echo "$((i + 1)). $(basename "${files[$i]}")"
+        if [ -f "$file" ]; then
+            echo "$i. $(basename "$file")"
+            i=$((i + 1))
+        fi
     done
 
     echo "Enter file number to review (or 0 to exit):"
-    read -r choice
+    read choice
 
     if [ "$choice" = "0" ]; then
         break
     fi
 
-    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#files[@]}" ]; then
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -ge "$i" ]; then
         echo "Invalid choice."
         continue
     fi
 
-    selected_file="${files[$((choice - 1))]}"
+    i=1
+    for file in "$quarantine_folder"/*
+    do
+        if [ -f "$file" ]; then
+            if [ "$i" -eq "$choice" ]; then
+                selected_file="$file"
+                break
+            fi
+            i=$((i + 1))
+        fi
+    done
 
     echo "1. Restore file"
     echo "2. Permanently delete file"
     echo "3. Return to file list"
-    read -r action
+    read action
 
     case "$action" in
         1)
@@ -52,7 +62,6 @@ do
             fi
             ;;
         3)
-            continue
             ;;
         *)
             echo "Invalid choice."
